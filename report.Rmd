@@ -13,11 +13,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This is the final project for Coursera’s Practical Machine Learning course which is part of the Data Science: Statistics and Machine Learning Specialization.
 
-The data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants were used to predict the manner in which the participants did the exercise. The variable predicted is the “classe” variable in the training set. The training data set was partitioned 70\% for train the models, and 30\% for validate the models. 4 models were trained: Random Forest, Decision Tree,  and Gradient Boosted Trees using 3-folds cross validation on the training set. After training the models, predictions were done using the validation set to get the accuracy and the out of sample error rate (OOS). Finally, the model with the best accuracy and OOS was used to predict the 20 cases using the testing file.
+The data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants were used to predict the manner in which the participants did the exercise. The variable predicted is the “classe” variable in the training set. The training data set was partitioned 70\% for train the models, and 30\% for validate the models. 3 models were trained: Random Forest, Decision Tree,  and Gradient Boosted Trees using 3-folds cross validation on the training set. After training the models, predictions were done using the validation set to get the accuracy and the out of sample error rate (OOS). Finally, the model with the best accuracy and OOS was used to predict the 20 cases using the testing file.
 
 ## Used packages
 
-```{r , message=F}
+```{r packages, message=F}
 library(caret)
 library(dplyr)
 library(tidyr)
@@ -31,7 +31,7 @@ library(kableExtra)
 
 ## Loading data
 
-```{r}
+```{r data}
 training <- read.csv("pml-training.csv")
 testing <- read.csv("pml-testing.csv")
 ```
@@ -42,7 +42,7 @@ testing <- read.csv("pml-testing.csv")
 
 As part of the preprocessing, it was first determined how many variables had NAs and how many NAs had, was determined that 67 variables had 19216 NAs. After the columns that had less of 5\% of NAs were retained. In other words, the columns with more than 95% of NAs were eliminated.
 
-```{r}
+```{r NAS}
 table(skim(training)$n_missing)
 
 training <- training %>% 
@@ -52,12 +52,12 @@ training <- training %>%
 
 The variables with near zero variance were removed. Finally the columns from 1 to 5 were removed because they had irrelevant information to creating the models.
 
-```{r}
+```{r nzv}
 nzv <- nearZeroVar(training)
 training <- training[-nzv]
 ```
 
-```{r}
+```{r irre}
 training <- training[-c(1:5)]
 ```
 
@@ -65,7 +65,7 @@ training <- training[-c(1:5)]
 
 The training set was splitted in two sets, one to train the  models and another to validate them. 
 
-```{r}
+```{r splitting}
 set.seed(12345)
 inTrain <- createDataPartition(y=training$classe, p=0.7, list=F)
 train <- training[inTrain,]
@@ -78,7 +78,7 @@ valid <- training[-inTrain,]
 
 3-fold cross validation was used for training the models. 
 
-```{r}
+```{r control}
 control <- trainControl(method="cv", number=3, verboseIter=F)
 ```
 
@@ -87,14 +87,14 @@ control <- trainControl(method="cv", number=3, verboseIter=F)
 
 #### Model
 
-```{r}
+```{r rf}
 model1 <- train(classe ~ ., data=train, method="rf", trControl = control)
 model1$finalModel
 ```
 
 #### Prediction, Confusion Matrix and Accuracy
 
-```{r}
+```{r predrf}
 pred_model1 <- predict(model1, valid)
 confmat_model1 <- confusionMatrix(pred_model1, factor(valid$classe))
 confmat_model1$overall["Accuracy"]
@@ -103,14 +103,14 @@ confmat_model1$overall["Accuracy"]
 
 #### Model 
 
-```{r}
+```{r dectree}
 model2 <- train(classe~., data=train, method="rpart", trControl = control, tuneLength = 5)
 fancyRpartPlot(model2$finalModel)
 ```
 
 #### Prediction, Confusion Matrix and Accuracy
 
-```{r}
+```{r preddectree}
 pred_model2 <- predict(model2, valid)
 confmat_model2 <- confusionMatrix(pred_model2, factor(valid$classe))
 confmat_model2$overall["Accuracy"]
@@ -120,14 +120,14 @@ confmat_model2$overall["Accuracy"]
 
 #### Model
 
-```{r}
+```{r gbm}
 model3 <- train(classe~., data=train, method="gbm", trControl = control, tuneLength = 5, verbose = F)
 model3$finalModel
 ```
 
 #### Prediction, Confusion Matrix and Accuracy
 
-```{r}
+```{r predgbm}
 pred_model3 <- predict(model3, valid)
 confmat_model3 <- confusionMatrix(pred_model3, factor(valid$classe))
 confmat_model3$overall["Accuracy"]
@@ -135,7 +135,7 @@ confmat_model3$overall["Accuracy"]
 
 ### Accuracy and Out of Sample Error of all models
 
-```{r}
+```{r tableaccu}
 accs <- data.frame(
   Model = c("model1","model2","model3"),
   Accuracy = c(confmat_model1$overall["Accuracy"],
@@ -154,27 +154,27 @@ The best model was the gradient boosted tree with an accuracy of `r round(confma
 
 ## Predictions using test set
 
-```{r}
+```{r finalpreds}
 final_pred <- predict(model3, testing)
 preds <- data.frame(
   Case = paste("Case", seq(1,20,1)),
   Prediction = final_pred
 )
-kable(preds)
+kableExtra::kable(preds)
 ```
 
 ## Another plots
 
 Plots of models.
 
-```{r}
+```{r plotm1}
 plot(model1)
 ```
 
-```{r}
+```{r plotm2}
 plot(model2)
 ```
-```{r}
+```{r plotm3}
 plot(model3)
 ```
 
